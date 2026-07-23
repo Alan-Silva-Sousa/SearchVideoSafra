@@ -1,0 +1,19 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: 'Montserrat', sans-serif;
+  background: #07101d;
+  color: #e9eef5;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+} 
