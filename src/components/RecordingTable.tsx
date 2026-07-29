@@ -4,6 +4,7 @@ import {
 } from '@mui/material'
 import RecordingRow from './RecordingRow'
 import type { RecordingMeta } from '../hooks/useRecordings'
+import { api } from '../services/api'
 
 const rowsPerPage = 35;
 
@@ -45,6 +46,30 @@ export default function RecordingTable({
     else setSelectedIds(selectedIds.filter(x => x !== CallIDMaster))
   }
 
+  const handleDownloadZip = async () => {
+    if (!selectedIds.length) return;
+    setLoading(true);
+    try {
+      const response = await api.post(
+        '/audio/zip',
+        { ids: selectedIds },
+        { responseType: 'blob' },
+      );
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'videos.zip';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Não foi possível gerar o arquivo ZIP. Verifique os objetos no S3.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!recordings.length) return null
 
   return (
@@ -55,7 +80,8 @@ export default function RecordingTable({
           variant="contained"
           color="primary"
           size="small"
-          disabled={selectedIds.length === 0}
+          disabled={selectedIds.length === 0 || loading}
+          onClick={handleDownloadZip}
           sx={{
             fontWeight: 700,
             backgroundColor: selectedIds.length === 0 ? '#4a576a' : '#0d4f8b',
