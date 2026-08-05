@@ -29,23 +29,26 @@ export interface RecordingMeta {
   EC: string | null;
   CONTRATO: string | null;
   PROTOCOLO: string | null;
+  ParticipantData: Record<string, unknown>;
 }
 
 const filterTypeMap: Record<string, string> = {
-  user: 'Agent',
-  agentLogin: 'AgentLogin',
-  category: 'Campaign',
+  telefoneCliente: 'CustomerPhone',
+  telefoneDestino: 'DestinationPhone',
+  documento: 'Document',
+  filaSkill: 'QueueSkill',
+  ambiente: 'Environment',
+  duracao: 'Duration',
   format: 'Format',
-  ani: 'ANI',
-  dnis: 'DNIS',
-  cpf: 'CPF',
-  cnpj: 'CNPJ',
-  agencia: 'AGENCIA',
-  conta: 'CONTA',
-  ec: 'EC',
-  contrato: 'CONTRATO',
-  protocolo: 'PROTOCOLO',
 };
+
+function normalizeDuration(value: string): string {
+  const parts = value.trim().split(':').map(Number);
+  if (parts.some(Number.isNaN)) return value.trim();
+  if (parts.length === 2) return String(parts[0] * 60 + parts[1]);
+  if (parts.length === 3) return String(parts[0] * 3600 + parts[1] * 60 + parts[2]);
+  return value.trim();
+}
 
 export default function useRecordings() {
   const [data, setData] = useState<RecordingMeta[]>([]);
@@ -75,7 +78,12 @@ export default function useRecordings() {
       const type = filterTypeMap[filter.field];
       if (type && filter.value?.trim()) {
         params.append('filterType', type);
-        params.append('filterValue', filter.value.trim());
+        params.append(
+          'filterValue',
+          filter.field === 'duracao'
+            ? normalizeDuration(filter.value)
+            : filter.value.trim(),
+        );
       }
     });
 

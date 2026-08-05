@@ -28,6 +28,27 @@ interface Props {
   onCheck: (id: string, checked: boolean) => void;
 }
 
+function participantDataEntries(data: Record<string, unknown> | undefined) {
+  return Object.entries(data || {})
+    .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== "")
+    .sort(([left], [right]) => left.localeCompare(right, "pt-BR"));
+}
+
+function participantDataValue(value: unknown): string {
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+function participantValue(data: Record<string, unknown> | undefined, ...keys: string[]): string {
+  const entries = Object.entries(data || {});
+  for (const key of keys) {
+    const entry = entries.find(([name]) => name.trim().toLowerCase() === key.toLowerCase());
+    if (entry && entry[1] !== null && entry[1] !== undefined && String(entry[1]).trim()) {
+      return String(entry[1]).trim();
+    }
+  }
+  return "";
+}
+
 export default function RecordingRow({ recording, checked, onCheck }: Props) {
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -139,6 +160,14 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   }
 
+  const participantData = recording.ParticipantData;
+  const startTime = participantValue(participantData, "Hora Inicio") || recording.RecordStart;
+  const customerPhone = participantValue(participantData, "Telefone Cliente", "telefone") || recording.ANI?.replace(/^tel:\+?/, "");
+  const destinationPhone = participantValue(participantData, "Telefone Destino") || recording.DNIS?.replace(/^tel:\+?/, "");
+  const document = participantValue(participantData, "Doc Cliente", "doc_cliente", "CPF", "CNPJ");
+  const skill = participantValue(participantData, "skill", "transfer_filas");
+  const environment = participantValue(participantData, "Ambiente");
+
   return (
     <>
       <TableRow hover sx={{ "&:hover": { backgroundColor: "#0d2344" } }}>
@@ -155,7 +184,7 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
           </IconButton>
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {new Date(recording.RecordStart).toLocaleString("pt-BR", {
+          {new Date(startTime).toLocaleString("pt-BR", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
@@ -164,25 +193,22 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
           })}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {recording.ANI || "-"}
+          {customerPhone || "-"}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {recording.DNIS || "-"}
+          {destinationPhone || "-"}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {recording.Username || "-"}
+          {document || "-"}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {recording.AgentLogin || "-"}
+          {skill || "-"}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
-          {recording.Campaignname || "-"}
+          {environment || "-"}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
           {formatDuration(recording.RecordDuration)}
-        </TableCell>
-        <TableCell sx={{ color: "text.primary" }}>
-          {formatFileSize(recording.DestinationFileSize)}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
           {formatContentType(recording.ContentType)}
@@ -190,7 +216,7 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
       </TableRow>
       <TableRow>
         <TableCell
-          colSpan={11}
+          colSpan={10}
           sx={{
             bgcolor: "#08213d",
             p: 0,
@@ -225,69 +251,26 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
                 />
               )}
 
-              {/* Grid com informações da chamada */}
-              <Grid container spacing={2} sx={{ width: "100%", mt: 1 }}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>ANI:</strong> {recording.ANI || "-"}
+              {participantDataEntries(recording.ParticipantData).length > 0 && (
+                <Box sx={{ width: "100%", mt: 1 }}>
+                  <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                    Participant Data
                   </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>DNIS:</strong> {recording.DNIS || "-"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Nome do Agente:</strong> {recording.Username || "-"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Login do Agente:</strong>{" "}
-                    {recording.AgentLogin || "-"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>CPF:</strong> {recording.CPF || "-"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>CNPJ:</strong> {recording.CNPJ || "-"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Agência:</strong> {recording.AGENCIA || "-"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Conta:</strong> {recording.CONTA || "-"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>EC:</strong> {recording.EC || "-"}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Contrato:</strong> {recording.CONTRATO || "-"}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Protocolo:</strong> {recording.PROTOCOLO || "-"}
-                  </Typography>
-                </Grid>
-              </Grid>
+                  <Grid container spacing={2}>
+                    {participantDataEntries(recording.ParticipantData).map(([key, value]) => (
+                      <Grid item xs={12} md={key.toUpperCase().includes("CDR") ? 12 : 6} key={key}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}
+                        >
+                          <strong>{key}:</strong> {participantDataValue(value)}
+                        </Typography>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              )}
 
               <Typography variant="body2" color="text.secondary">
                 <strong>Formato:</strong> {recording.ContentType || "MP4"}

@@ -5,13 +5,16 @@ import {
   CircularProgress,
   Container,
   Paper,
+  Button,
   Typography,
 } from '@mui/material'
+import AudiotrackIcon from '@mui/icons-material/Audiotrack'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import FilterBar, { type FilterItem } from '../components/RecordingFilterBar'
 import RecordingTable from '../components/RecordingTable'
 import useRecordings from '../hooks/useRecordings'
+import { appUrl } from '../auth/accessContext'
 
 export default function RecordingListPage() {
   const { data: recordings, fetchRecordings, loading, error } = useRecordings()
@@ -42,10 +45,27 @@ export default function RecordingListPage() {
       }}
     >
       <Container maxWidth={false} sx={{ maxWidth: '90%' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            mb: 4,
+            gap: 2,
+          }}
+        >
           <Typography variant="h4" fontWeight={700} color="text.primary">
             Searchvideo4me
           </Typography>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AudiotrackIcon />}
+            onClick={() => window.location.assign(appUrl('audio'))}
+          >
+            Buscar áudios
+          </Button>
         </Box>
 
         <Box margin="0 0 0 0" sx={{ mb: 4 }}>
@@ -111,13 +131,13 @@ export default function RecordingListPage() {
         }}
       >
         <img
-          src="/Banco Safra Logo White.png"
+          src={`${import.meta.env.BASE_URL}Banco Safra Logo White.png`}
           alt="Banco Safra"
           style={{
-            width: 'clamp(120px, 14vw, 220px)',
-            height: 'auto',
+            height: 120,
+            width: 'auto',
             opacity: 0.9,
-            filter: 'drop-shadow(0 2px 8px #0002)',
+            filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.14))',
             userSelect: 'none',
           }}
           draggable={false}
