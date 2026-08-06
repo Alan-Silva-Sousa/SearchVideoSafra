@@ -5,6 +5,7 @@ import {
 import RecordingRow from './RecordingRow'
 import type { RecordingMeta } from '../hooks/useRecordings'
 import { api } from '../services/api'
+import { getAccessContext } from '../auth/accessContext'
 
 const rowsPerPage = 35;
 
@@ -46,25 +47,20 @@ export default function RecordingTable({
     else setSelectedIds(selectedIds.filter(x => x !== CallIDMaster))
   }
 
-  const handleDownloadZip = async () => {
+  const handleDownloadZip = () => {
     if (!selectedIds.length) return;
     setLoading(true);
     try {
-      const response = await api.post(
-        '/audio/zip',
-        { ids: selectedIds },
-        { responseType: 'blob' },
-      );
-      const url = URL.createObjectURL(response.data);
+      const params = new URLSearchParams({ accessGroup: getAccessContext() });
+      selectedIds.forEach((id) => params.append('id', id));
       const link = document.createElement('a');
-      link.href = url;
+      link.href = `${api.defaults.baseURL}/audio/zip/download?${params}`;
       link.download = 'videos.zip';
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
     } catch {
-      alert('Não foi possível gerar o arquivo ZIP. Verifique os objetos no S3.');
+      alert('Não foi possível iniciar o download do arquivo ZIP.');
     } finally {
       setLoading(false);
     }

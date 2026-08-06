@@ -21,6 +21,7 @@ import {
 import { useEffect, useState } from "react";
 import type { RecordingMeta } from "../hooks/useRecordings";
 import { api } from "../services/api";
+import { getAccessContext } from "../auth/accessContext";
 
 interface Props {
   recording: RecordingMeta;
@@ -51,7 +52,6 @@ function participantValue(data: Record<string, unknown> | undefined, ...keys: st
 
 export default function RecordingRow({ recording, checked, onCheck }: Props) {
   const [open, setOpen] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
@@ -102,37 +102,6 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
     };
   }, [open, recording.CallIDMaster]);
 
-  async function handleDownload() {
-    setDownloading(true);
-    try {
-      const response = await api.get(
-        `/audio/download/${recording.CallIDMaster}`,
-        {
-          responseType: "blob",
-        },
-      );
-      const url = URL.createObjectURL(response.data);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = recording.DestinationFileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (error: any) {
-      let message = "Não foi possível baixar o vídeo.";
-      if (error.response?.data instanceof Blob) {
-        try {
-          const payload = JSON.parse(await error.response.data.text());
-          if (payload.message) message = payload.message;
-        } catch {}
-      }
-      alert(message);
-    } finally {
-      setDownloading(false);
-    }
-  }
-
   function handleOpenRow() {
     setOpen((o) => !o);
   }
@@ -167,6 +136,10 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
   const document = participantValue(participantData, "Doc Cliente", "doc_cliente", "CPF", "CNPJ");
   const skill = participantValue(participantData, "skill", "transfer_filas");
   const environment = participantValue(participantData, "Ambiente");
+  const downloadParams = new URLSearchParams({
+    accessGroup: getAccessContext(),
+  });
+  const downloadUrl = `${api.defaults.baseURL}/audio/download/${encodeURIComponent(recording.CallIDMaster)}?${downloadParams}`;
 
   return (
     <>
@@ -289,13 +262,14 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
               <Stack direction="row" spacing={1}>
                 <Tooltip title="Download do video">
                   <Button
+                    component="a"
+                    href={downloadUrl}
+                    download={recording.DestinationFileName || "video.mp4"}
                     color="primary"
                     startIcon={<Download />}
                     sx={{ borderColor: "#375a8f" }}
-                    disabled={downloading}
-                    onClick={handleDownload}
                   >
-                    {downloading ? "Baixando..." : "Baixar vídeo"}
+                    Baixar vídeo
                   </Button>
                 </Tooltip>
               </Stack>
