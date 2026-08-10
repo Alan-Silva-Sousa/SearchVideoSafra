@@ -17,12 +17,13 @@ import useRecordings from '../hooks/useRecordings'
 import { appUrl } from '../auth/accessContext'
 
 export default function RecordingListPage() {
-  const { data: recordings, fetchRecordings, loading, error } = useRecordings()
+  const { data: recordings, fetchRecordings, fetchFilterFields, filterFields, loading, error } = useRecordings()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showDateRangeAlert, setShowDateRangeAlert] = useState(false)
 
   useEffect(() => {
     void fetchRecordings([])
+    void fetchFilterFields()
   }, [])
 
   const handleFilterChange = useCallback((filters: FilterItem[]) => {
@@ -71,6 +72,7 @@ export default function RecordingListPage() {
         <Box margin="0 0 0 0" sx={{ mb: 4 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <FilterBar
+              participantFields={filterFields}
               onSubmit={fetchRecordings}
               onFilterChange={handleFilterChange}
             />
