@@ -21,7 +21,9 @@ import {
 import { useEffect, useState } from "react";
 import type { RecordingMeta } from "../hooks/useRecordings";
 import { api } from "../services/api";
-import { getAccessContext } from "../auth/accessContext";
+import { downloadSingleRecording } from "../hooks/downloadGravacao";
+import DownloadJustificationDialog from "./DownloadJustificationDialog";
+import { PERMISSIONS, usePermissions } from "../hooks/usePermissions";
 
 interface Props {
   recording: RecordingMeta;
@@ -51,13 +53,15 @@ function participantValue(data: Record<string, unknown> | undefined, ...keys: st
 }
 
 export default function RecordingRow({ recording, checked, onCheck }: Props) {
+  const { can, downloadJustificationRequired } = usePermissions();
   const [open, setOpen] = useState(false);
+  const [justificationOpen, setJustificationOpen] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !can(PERMISSIONS.RECORDING_PLAY)) {
       setVideoUrl(null);
       setVideoLoading(false);
       setVideoError(null);
@@ -100,7 +104,7 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [open, recording.CallIDMaster]);
+  }, [open, recording.CallIDMaster, can]);
 
   function handleOpenRow() {
     setOpen((o) => !o);
@@ -136,10 +140,6 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
   const document = participantValue(participantData, "Doc Cliente", "doc_cliente", "CPF", "CNPJ");
   const skill = participantValue(participantData, "skill", "transfer_filas");
   const environment = participantValue(participantData, "Ambiente");
-  const downloadParams = new URLSearchParams({
-    accessGroup: getAccessContext(),
-  });
-  const downloadUrl = `${api.defaults.baseURL}/audio/download/${encodeURIComponent(recording.CallIDMaster)}?${downloadParams}`;
 
   return (
     <>
@@ -208,20 +208,26 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
                 bgcolor: "#08213d",
               }}
             >
-              {videoLoading && <CircularProgress size={28} />}
-              {videoError && (
-                <Alert severity="error" sx={{ width: "100%", maxWidth: 960 }}>
-                  {videoError}
-                </Alert>
-              )}
-              {videoUrl && (
-                <Box
-                  component="video"
-                  src={videoUrl}
-                  controls
-                  preload="metadata"
-                  sx={{ width: "100%", maxWidth: 960 }}
-                />
+              {can(PERMISSIONS.RECORDING_PLAY) ? (
+                <>
+                  {videoLoading && <CircularProgress size={28} />}
+                  {videoError && (
+                    <Alert severity="error" sx={{ width: "100%", maxWidth: 960 }}>
+                      {videoError}
+                    </Alert>
+                  )}
+                  {videoUrl && (
+                    <Box
+                      component="video"
+                      src={videoUrl}
+                      controls
+                      preload="metadata"
+                      sx={{ width: "100%", maxWidth: 960 }}
+                    />
+                  )}
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">Reprodução não autorizada.</Typography>
               )}
 
               {participantDataEntries(recording.ParticipantData).length > 0 && (
@@ -259,20 +265,32 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
                 {formatFileSize(recording.DestinationFileSize)}
               </Typography>
 
+              {can(PERMISSIONS.RECORDING_DOWNLOAD) && (
               <Stack direction="row" spacing={1}>
                 <Tooltip title="Download do video">
                   <Button
-                    component="a"
-                    href={downloadUrl}
-                    download={recording.DestinationFileName || "video.mp4"}
                     color="primary"
                     startIcon={<Download />}
                     sx={{ borderColor: "#375a8f" }}
+                    onClick={() => {
+                      if (downloadJustificationRequired) setJustificationOpen(true);
+                      else void downloadSingleRecording(recording);
+                    }}
                   >
                     Baixar vídeo
                   </Button>
                 </Tooltip>
               </Stack>
+              )}
+              <DownloadJustificationDialog
+                open={justificationOpen}
+                kind="SINGLE"
+                onCancel={() => setJustificationOpen(false)}
+                onConfirm={(justification) => {
+                  setJustificationOpen(false);
+                  void downloadSingleRecording(recording, { justification });
+                }}
+              />
             </Box>
           </Collapse>
         </TableCell>

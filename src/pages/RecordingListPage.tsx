@@ -11,12 +11,16 @@ import {
 import AudiotrackIcon from '@mui/icons-material/Audiotrack'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 import { LocalizationProvider } from '@mui/x-date-pickers'
+import { useNavigate } from 'react-router-dom'
 import FilterBar, { type FilterItem } from '../components/RecordingFilterBar'
 import RecordingTable from '../components/RecordingTable'
 import useRecordings from '../hooks/useRecordings'
 import { appUrl } from '../auth/accessContext'
+import { PERMISSIONS, usePermissions } from '../hooks/usePermissions'
 
 export default function RecordingListPage() {
+  const navigate = useNavigate()
+  const { can } = usePermissions()
   const { data: recordings, fetchRecordings, fetchFilterFields, filterFields, loading, error } = useRecordings()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showDateRangeAlert, setShowDateRangeAlert] = useState(false)
@@ -59,16 +63,26 @@ export default function RecordingListPage() {
           <Typography variant="h4" fontWeight={700} color="text.primary">
             Searchvideo4me
           </Typography>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<AudiotrackIcon />}
-            onClick={() => window.location.assign(appUrl('audio'))}
-          >
-            Buscar áudios
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<AudiotrackIcon />}
+              onClick={() => window.location.assign(appUrl('audio'))}
+            >
+              Buscar áudios
+            </Button>
+            {can(PERMISSIONS.AUDIT_READ) && (
+              <Button variant="outlined" onClick={() => navigate('/audit')} sx={{ fontWeight: 700 }}>
+                Auditoria
+              </Button>
+            )}
+          </Box>
         </Box>
 
+        {!can(PERMISSIONS.RECORDING_SEARCH) ? (
+          <Alert severity="warning" sx={{ mb: 3 }}>Você não tem permissão para pesquisar gravações.</Alert>
+        ) : (
         <Box margin="0 0 0 0" sx={{ mb: 4 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <FilterBar
@@ -78,6 +92,7 @@ export default function RecordingListPage() {
             />
           </LocalizationProvider>
         </Box>
+        )}
 
         {showDateRangeAlert && (
           <Alert severity="warning" sx={{ mb: 3 }}>
@@ -91,7 +106,7 @@ export default function RecordingListPage() {
           </Alert>
         )}
 
-        {loading ? (
+        {!can(PERMISSIONS.RECORDING_SEARCH) ? null : loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
             <CircularProgress sx={{ color: '#fff' }} />
           </Box>

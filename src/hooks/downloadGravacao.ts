@@ -1,0 +1,67 @@
+import type { RecordingMeta } from './useRecordings';
+import { getAccessContext } from '../auth/accessContext';
+import type { DownloadRequestMeta } from '../audit/contract';
+import { api } from '../services/api';
+
+function downloadQuery(meta: DownloadRequestMeta): URLSearchParams {
+  const params = new URLSearchParams({
+    downloadKind: meta.kind,
+  });
+  if (meta.justification) params.set('justification', meta.justification);
+  return params;
+}
+
+export async function downloadSingleRecording(
+  recording: RecordingMeta,
+  meta: Omit<DownloadRequestMeta, 'kind' | 'recordingIds'> = {},
+): Promise<void> {
+  const id = recording.CallIDMaster;
+  if (!id) return;
+  await downloadSingleById(id, recording.DestinationFileName, { justification: meta.justification });
+}
+
+async function downloadSingleById(id: string, fileName?: string, extra: { justification?: string } = {}): Promise<void> {
+  const params = downloadQuery({ kind: 'SINGLE', recordingIds: [id], justification: extra.justification });
+  const response = await api.get(`/audio/download/${encodeURIComponent(id)}?${params}`, {
+    responseType: 'blob',
+  });
+  const disposition = String(response.headers['content-disposition'] || '');
+  const match = disposition.match(/filename="(.+)"/);
+  triggerBrowserDownload(response.data, match ? match[1] : fileName || `${id}.mp4`);
+}
+
+function downloadAsZip(ids: string[], justification?: string): void {
+  const params = downloadQuery({ kind: 'ZIP', recordingIds: ids, justification });
+  params.set('accessGroup', getAccessContext());
+  ids.forEach((id) => params.append('id', id));
+  const link = document.createElement('a');
+  link.href = `${api.defaults.baseURL}/audio/zip/download?${params}`;
+  link.download = 'videos.zip';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  window.setTimeout(() => link.remove(), 60_000);
+}
+
+export async function downloadSelectedRecordings(
+  ids: string[],
+  extra: { justification?: string } = {},
+): Promise<void> {
+  if (!ids.length) return;
+  if (ids.length === 1) {
+    await downloadSingleById(ids[0], undefined, extra);
+    return;
+  }
+  downloadAsZip(ids, extra.justification);
+}
+
+function triggerBrowserDownload(blob: Blob, fileName: string): void {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}

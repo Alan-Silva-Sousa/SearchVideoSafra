@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Box, CircularProgress } from '@mui/material';
-import { Routes, Route, Navigate } from "react-router-dom";
-import RecordingListPage from "./pages/RecordingListPage";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import RecordingListPage from './pages/RecordingListPage';
+import AuditPage from './pages/AuditPage';
 import { api } from './services/api';
 import { appUrl, getAccessContext } from './auth/accessContext';
+import { PermissionsProvider } from './hooks/usePermissions';
 
-function AuthenticatedApp() {
+function AuthenticatedShell({ children }: { children: ReactNode }) {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState('');
 
@@ -40,7 +42,7 @@ function AuthenticatedApp() {
       });
   }, []);
 
-  if (authenticated) return <RecordingListPage />;
+  if (authenticated) return <PermissionsProvider>{children}</PermissionsProvider>;
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
@@ -52,8 +54,9 @@ function AuthenticatedApp() {
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<AuthenticatedApp />} />
-      <Route path="/auth/callback" element={<AuthenticatedApp />} />
+      <Route path="/" element={<AuthenticatedShell><RecordingListPage /></AuthenticatedShell>} />
+      <Route path="/audit" element={<AuthenticatedShell><AuditPage /></AuthenticatedShell>} />
+      <Route path="/auth/callback" element={<AuthenticatedShell><RecordingListPage /></AuthenticatedShell>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

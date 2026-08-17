@@ -4,8 +4,9 @@ import {
 } from '@mui/material'
 import RecordingRow from './RecordingRow'
 import type { RecordingMeta } from '../hooks/useRecordings'
-import { api } from '../services/api'
-import { getAccessContext } from '../auth/accessContext'
+import { downloadSelectedRecordings } from '../hooks/downloadGravacao'
+import DownloadJustificationDialog from './DownloadJustificationDialog'
+import { PERMISSIONS, usePermissions } from '../hooks/usePermissions'
 
 const rowsPerPage = 35;
 
@@ -20,8 +21,10 @@ export default function RecordingTable({
   setSelectedIds: (ids: string[]) => void
 }) {
 
+  const { can, downloadJustificationRequired } = usePermissions();
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false);
+  const [justificationOpen, setJustificationOpen] = useState(false);
 
   useEffect(() => { setPage(0) }, [recordings])
 
@@ -47,18 +50,10 @@ export default function RecordingTable({
     else setSelectedIds(selectedIds.filter(x => x !== CallIDMaster))
   }
 
-  const handleDownloadZip = () => {
-    if (!selectedIds.length) return;
+  async function runDownload(justification?: string) {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ accessGroup: getAccessContext() });
-      selectedIds.forEach((id) => params.append('id', id));
-      const link = document.createElement('a');
-      link.href = `${api.defaults.baseURL}/audio/zip/download?${params}`;
-      link.download = 'videos.zip';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await downloadSelectedRecordings(selectedIds, { justification });
     } catch {
       alert('Não foi possível iniciar o download do arquivo ZIP.');
     } finally {
@@ -66,18 +61,28 @@ export default function RecordingTable({
     }
   }
 
+  async function handleDownloadSelected() {
+    if (!can(PERMISSIONS.RECORDING_DOWNLOAD) || !selectedIds.length) return;
+    if (downloadJustificationRequired) {
+      setJustificationOpen(true);
+      return;
+    }
+    await runDownload();
+  }
+
   if (!recordings.length) return null
 
   return (
     <Paper sx={{ width: '100%', mx: 'auto', bgcolor: 'background.paper', color: 'text.primary' }}>
       {/* Botão de download em lote */}
+      {can(PERMISSIONS.RECORDING_DOWNLOAD) && (
       <Box sx={{ p: 2, pb: 0, display: 'flex', justifyContent: 'flex-end' }}>
         <Button
           variant="contained"
           color="primary"
           size="small"
           disabled={selectedIds.length === 0 || loading}
-          onClick={handleDownloadZip}
+          onClick={handleDownloadSelected}
           sx={{
             fontWeight: 700,
             backgroundColor: selectedIds.length === 0 ? '#4a576a' : '#0d4f8b',
@@ -95,6 +100,16 @@ export default function RecordingTable({
           )}
         </Button>
       </Box>
+      )}
+      <DownloadJustificationDialog
+        open={justificationOpen}
+        kind={selectedIds.length > 1 ? 'ZIP' : 'SINGLE'}
+        onCancel={() => setJustificationOpen(false)}
+        onConfirm={(justification) => {
+          setJustificationOpen(false);
+          void runDownload(justification);
+        }}
+      />
 
       <Box sx={{ overflowX: 'auto', transform: 'rotateX(180deg)', width: '100%' }}>
         <Box sx={{ transform: 'rotateX(180deg)' }}>
