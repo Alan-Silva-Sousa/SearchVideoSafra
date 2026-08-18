@@ -23,6 +23,8 @@ import { api } from "../services/api";
 import { downloadSingleRecording } from "../hooks/downloadGravacao";
 import DownloadJustificationDialog from "./DownloadJustificationDialog";
 import { PERMISSIONS, usePermissions } from "../hooks/usePermissions";
+import { formatPhone } from "../utils/phone";
+import { formatCpfCnpj } from "../utils/document";
 
 interface Props {
   recording: RecordingMeta;
@@ -139,7 +141,7 @@ export default function RecordingRow({ recording }: Props) {
   const startTime = participantValue(participantData, "Hora Inicio") || recording.RecordStart;
   const customerPhone = participantValue(participantData, "Telefone Cliente", "telefone") || recording.ANI?.replace(/^tel:\+?/, "");
   const destinationPhone = participantValue(participantData, "Telefone Destino") || recording.DNIS?.replace(/^tel:\+?/, "");
-  const document = participantValue(participantData, "Doc Cliente", "doc_cliente", "CPF", "CNPJ");
+  const document = recording.CPF || recording.CNPJ || participantValue(participantData, "Doc Cliente", "doc_cliente", "CPF", "CNPJ");
   const skill = participantValue(participantData, "skill", "transfer_filas");
   const environment = participantValue(participantData, "Ambiente");
 
@@ -160,14 +162,14 @@ export default function RecordingRow({ recording }: Props) {
             minute: "2-digit",
           })}
         </TableCell>
-        <TableCell sx={{ color: "text.primary" }}>
-          {customerPhone || "-"}
+        <TableCell sx={{ color: "text.primary", whiteSpace: "nowrap" }}>
+          {formatPhone(customerPhone)}
         </TableCell>
-        <TableCell sx={{ color: "text.primary" }}>
-          {destinationPhone || "-"}
+        <TableCell sx={{ color: "text.primary", whiteSpace: "nowrap" }}>
+          {formatPhone(destinationPhone)}
         </TableCell>
-        <TableCell sx={{ color: "text.primary" }}>
-          {document || "-"}
+        <TableCell sx={{ color: "text.primary", whiteSpace: "nowrap" }}>
+          {formatCpfCnpj(document)}
         </TableCell>
         <TableCell sx={{ color: "text.primary" }}>
           {skill || "-"}

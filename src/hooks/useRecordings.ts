@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { FilterItem } from '../components/RecordingFilterBar';
 import { api } from '../services/api';
 import { RECORDING_FILTERS } from '../filters/recordingFilters';
+import { phoneSearchDigits } from '../utils/phone';
+import { documentDigits } from '../utils/document';
 
 export interface RecordingMeta {
   CallIDMaster: string;
@@ -36,6 +38,7 @@ export interface RecordingMeta {
 const FILTER_FIELD_TO_TYPE: Record<string, string> = {
   telefoneCliente: 'CustomerPhone',
   telefoneDestino: 'DestinationPhone',
+  documento: 'Document',
   recordStartStart: 'RecordStartStart',
   recordStartEnd: 'RecordStartEnd',
   filaSkill: 'QueueSkill',
@@ -45,18 +48,37 @@ const participantFilterKeys = Object.fromEntries(
   RECORDING_FILTERS.filter((item) => item.participantKey).map((item) => [item.field, item.participantKey!]),
 );
 
-function resolveFilter(filter: FilterItem): { filterType: string; filterField: string; filterValue: string } | null {
+function resolveFilter(filter: FilterItem): { filterType: string; filterField: string; filterValue: string }[] {
+  if (filter.field === 'RecordStart') {
+    const items = [];
+    if (filter.start) items.push({ filterType: 'RecordStartStart', filterField: '', filterValue: filter.start });
+    if (filter.end) items.push({ filterType: 'RecordStartEnd', filterField: '', filterValue: filter.end });
+    return items;
+  }
+  if (filter.field === 'RecordStartHour') {
+    const items = [];
+    if (filter.start) items.push({ filterType: 'RecordStartHourStart', filterField: '', filterValue: filter.start });
+    if (filter.end) items.push({ filterType: 'RecordStartHourEnd', filterField: '', filterValue: filter.end });
+    return items;
+  }
+
   const value = filter.value?.trim();
-  if (!filter.field || !value) return null;
+  if (!filter.field || !value) return [];
 
   const participantKey = participantFilterKeys[filter.field];
   if (participantKey) {
-    return { filterType: 'ParticipantData', filterField: participantKey, filterValue: value };
+    return [{ filterType: 'ParticipantData', filterField: participantKey, filterValue: value }];
   }
 
   const filterType = FILTER_FIELD_TO_TYPE[filter.field];
-  if (!filterType) return null;
-  return { filterType, filterField: '', filterValue: value };
+  if (!filterType) return [];
+  const filterValue = filterType === 'CustomerPhone' || filterType === 'DestinationPhone'
+    ? phoneSearchDigits(value)
+    : filterType === 'Document'
+      ? documentDigits(value)
+      : value;
+  if (!filterValue) return [];
+  return [{ filterType, filterField: '', filterValue }];
 }
 
 export default function useRecordings() {
@@ -70,11 +92,11 @@ export default function useRecordings() {
 
     const params = new URLSearchParams();
     filters.forEach((filter) => {
-      const resolved = resolveFilter(filter);
-      if (!resolved) return;
-      params.append('filterType', resolved.filterType);
-      params.append('filterField', resolved.filterField);
-      params.append('filterValue', resolved.filterValue);
+      resolveFilter(filter).forEach((resolved) => {
+        params.append('filterType', resolved.filterType);
+        params.append('filterField', resolved.filterField);
+        params.append('filterValue', resolved.filterValue);
+      });
     });
 
     try {

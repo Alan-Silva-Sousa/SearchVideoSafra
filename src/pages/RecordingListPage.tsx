@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import {
   Alert,
   Box,
@@ -9,8 +8,6 @@ import {
   Typography,
 } from '@mui/material'
 import AudiotrackIcon from '@mui/icons-material/Audiotrack'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
-import { LocalizationProvider } from '@mui/x-date-pickers'
 import { useNavigate } from 'react-router-dom'
 import FilterBar from '../components/RecordingFilterBar'
 import RecordingTable from '../components/RecordingTable'
@@ -22,10 +19,6 @@ export default function RecordingListPage() {
   const navigate = useNavigate()
   const { can, canAccessAudio } = usePermissions()
   const { data: recordings, fetchRecordings, loading, error } = useRecordings()
-
-  useEffect(() => {
-    void fetchRecordings([])
-  }, [])
 
   return (
     <Box
@@ -73,9 +66,7 @@ export default function RecordingListPage() {
           <Alert severity="warning" sx={{ mb: 3 }}>Você não tem permissão para pesquisar gravações.</Alert>
         ) : (
         <Box margin="0 0 0 0" sx={{ mb: 4 }}>
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <FilterBar onSubmit={fetchRecordings} />
-          </LocalizationProvider>
+            <FilterBar dark onSubmit={fetchRecordings} />
         </Box>
         )}
 
