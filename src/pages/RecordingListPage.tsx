@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import {
   Alert,
   Box,
@@ -12,7 +12,7 @@ import AudiotrackIcon from '@mui/icons-material/Audiotrack'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { useNavigate } from 'react-router-dom'
-import FilterBar, { type FilterItem } from '../components/RecordingFilterBar'
+import FilterBar from '../components/RecordingFilterBar'
 import RecordingTable from '../components/RecordingTable'
 import useRecordings from '../hooks/useRecordings'
 import { appUrl } from '../auth/accessContext'
@@ -21,23 +21,10 @@ import { PERMISSIONS, usePermissions } from '../hooks/usePermissions'
 export default function RecordingListPage() {
   const navigate = useNavigate()
   const { can, canAccessAudio } = usePermissions()
-  const { data: recordings, fetchRecordings, fetchFilterFields, filterFields, loading, error } = useRecordings()
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [showDateRangeAlert, setShowDateRangeAlert] = useState(false)
+  const { data: recordings, fetchRecordings, loading, error } = useRecordings()
 
   useEffect(() => {
     void fetchRecordings([])
-    void fetchFilterFields()
-  }, [])
-
-  const handleFilterChange = useCallback((filters: FilterItem[]) => {
-    const hasDateWithOnlyStart = filters.some(
-      (filter) =>
-        filter.field === 'date' &&
-        (!filter.end || filter.end === undefined),
-    )
-
-    setShowDateRangeAlert(hasDateWithOnlyStart)
   }, [])
 
   return (
@@ -87,19 +74,9 @@ export default function RecordingListPage() {
         ) : (
         <Box margin="0 0 0 0" sx={{ mb: 4 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <FilterBar
-              participantFields={filterFields}
-              onSubmit={fetchRecordings}
-              onFilterChange={handleFilterChange}
-            />
+            <FilterBar onSubmit={fetchRecordings} />
           </LocalizationProvider>
         </Box>
-        )}
-
-        {showDateRangeAlert && (
-          <Alert severity="warning" sx={{ mb: 3 }}>
-            Selecione a data final para completar o período.
-          </Alert>
         )}
 
         {error && (
@@ -113,11 +90,7 @@ export default function RecordingListPage() {
             <CircularProgress sx={{ color: '#fff' }} />
           </Box>
         ) : recordings?.length > 0 ? (
-          <RecordingTable
-            recordings={recordings}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-          />
+          <RecordingTable recordings={recordings} />
         ) : (
           <Paper
             sx={{

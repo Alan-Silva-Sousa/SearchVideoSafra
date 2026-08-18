@@ -2,7 +2,6 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   CircularProgress,
   Collapse,
   Grid,
@@ -27,8 +26,6 @@ import { PERMISSIONS, usePermissions } from "../hooks/usePermissions";
 
 interface Props {
   recording: RecordingMeta;
-  checked: boolean;
-  onCheck: (id: string, checked: boolean) => void;
 }
 
 function participantDataEntries(data: Record<string, unknown> | undefined) {
@@ -52,7 +49,7 @@ function participantValue(data: Record<string, unknown> | undefined, ...keys: st
   return "";
 }
 
-export default function RecordingRow({ recording, checked, onCheck }: Props) {
+export default function RecordingRow({ recording }: Props) {
   const { can, downloadJustificationRequired } = usePermissions();
   const [open, setOpen] = useState(false);
   const [justificationOpen, setJustificationOpen] = useState(false);
@@ -149,13 +146,6 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
   return (
     <>
       <TableRow hover sx={{ "&:hover": { backgroundColor: "#0d2344" } }}>
-        <TableCell padding="checkbox">
-          <Checkbox
-            color="primary"
-            checked={checked}
-            onChange={(e) => onCheck(recording.CallIDMaster, e.target.checked)}
-          />
-        </TableCell>
         <TableCell>
           <IconButton onClick={handleOpenRow} size="small" color="primary">
             {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
@@ -194,7 +184,7 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
       </TableRow>
       <TableRow>
         <TableCell
-          colSpan={10}
+          colSpan={9}
           sx={{
             bgcolor: "#08213d",
             p: 0,
@@ -226,6 +216,7 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
                       component="video"
                       src={videoUrl}
                       controls
+                      controlsList="nodownload"
                       preload="metadata"
                       sx={{ width: "100%", maxWidth: 960 }}
                     />
