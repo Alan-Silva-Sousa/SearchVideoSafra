@@ -43,7 +43,10 @@ export function PermissionsProvider({
 }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [accessGroups, setAccessGroups] = useState<AccessGroup[]>(session.accessGroups || []);
+  const [audioAccessGroups, setAudioAccessGroups] = useState<AccessGroup[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  const AUDIO_API_BASE_URL = import.meta.env.VITE_AUDIO_API_BASE_URL || '/audio/api';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +60,21 @@ export function PermissionsProvider({
         syncGroupInUrl(slug);
       }
     }
+
+    const token = localStorage.getItem('token');
+    fetch(`${AUDIO_API_BASE_URL}/auth/session`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => (response.ok ? response.json() as Promise<SessionResponse> : null))
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setAudioAccessGroups((data?.accessGroups || []).filter(isAudioAccessGroup));
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setAudioAccessGroups([]);
+      });
 
     const explicit = session.permissions?.canReadAudit;
     const resolve = async () => {
@@ -72,11 +90,10 @@ export function PermissionsProvider({
   const value = useMemo<PermissionsState>(
     () => {
       const currentSlug = getAccessContext();
-      const audioGroups = (session.accessGroups || []).filter(isAudioAccessGroup);
       return {
       permissions,
       accessGroups,
-      canAccessAudio: hasPairedMediaAccess(currentSlug, audioGroups, 'audio'),
+      canAccessAudio: hasPairedMediaAccess(currentSlug, audioAccessGroups, 'audio'),
       canAccessVideo: (session.accessGroups || []).some(isVideoAccessGroup),
       downloadJustificationRequired: false,
       loaded,
@@ -88,7 +105,7 @@ export function PermissionsProvider({
       },
     };
     },
-    [permissions, accessGroups, loaded, session],
+    [permissions, accessGroups, audioAccessGroups, loaded, session],
   );
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
