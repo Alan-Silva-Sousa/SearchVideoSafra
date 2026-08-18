@@ -1,58 +1,49 @@
+import axios from 'axios';
 import type { RecordingMeta } from './useRecordings';
-import { getAccessContext } from '../auth/accessContext';
-import type { DownloadRequestMeta } from '../audit/contract';
 import { api } from '../services/api';
 
-function downloadQuery(meta: DownloadRequestMeta): URLSearchParams {
-  const params = new URLSearchParams({
-    downloadKind: meta.kind,
-  });
-  if (meta.justification) params.set('justification', meta.justification);
-  return params;
+function downloadError(error: unknown): Error {
+  if (axios.isAxiosError(error) && error.response?.status === 403) {
+    return new Error('Permissão de download obrigatória');
+  }
+  return error instanceof Error ? error : new Error('Erro ao baixar arquivo');
 }
 
-export async function downloadSingleRecording(
-  recording: RecordingMeta,
-  meta: Omit<DownloadRequestMeta, 'kind' | 'recordingIds'> = {},
-): Promise<void> {
+export async function downloadSingleRecording(recording: RecordingMeta): Promise<void> {
   const id = recording.CallIDMaster;
   if (!id) return;
-  await downloadSingleById(id, recording.DestinationFileName, { justification: meta.justification });
+  await downloadSingleById(id, recording.DestinationFileName);
 }
 
-async function downloadSingleById(id: string, fileName?: string, extra: { justification?: string } = {}): Promise<void> {
-  const params = downloadQuery({ kind: 'SINGLE', recordingIds: [id], justification: extra.justification });
-  const response = await api.get(`/audio/download/${encodeURIComponent(id)}?${params}`, {
-    responseType: 'blob',
-  });
-  const disposition = String(response.headers['content-disposition'] || '');
-  const match = disposition.match(/filename="(.+)"/);
-  triggerBrowserDownload(response.data, match ? match[1] : fileName || `${id}.mp4`);
+async function downloadSingleById(id: string, fileName?: string): Promise<void> {
+  try {
+    const response = await api.get(`/audio/download/${encodeURIComponent(id)}`, {
+      responseType: 'blob',
+    });
+    const disposition = String(response.headers['content-disposition'] || '');
+    const match = disposition.match(/filename="(.+)"/);
+    triggerBrowserDownload(response.data, match ? match[1] : fileName || `${id}.mp4`);
+  } catch (error) {
+    throw downloadError(error);
+  }
 }
 
-function downloadAsZip(ids: string[], justification?: string): void {
-  const params = downloadQuery({ kind: 'ZIP', recordingIds: ids, justification });
-  params.set('accessGroup', getAccessContext());
-  ids.forEach((id) => params.append('id', id));
-  const link = document.createElement('a');
-  link.href = `${api.defaults.baseURL}/audio/zip/download?${params}`;
-  link.download = 'videos.zip';
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  window.setTimeout(() => link.remove(), 60_000);
+async function downloadAsZip(ids: string[]): Promise<void> {
+  try {
+    const response = await api.post('/audio/zip', { ids }, { responseType: 'blob' });
+    triggerBrowserDownload(response.data, 'videos.zip');
+  } catch (error) {
+    throw downloadError(error);
+  }
 }
 
-export async function downloadSelectedRecordings(
-  ids: string[],
-  extra: { justification?: string } = {},
-): Promise<void> {
+export async function downloadSelectedRecordings(ids: string[]): Promise<void> {
   if (!ids.length) return;
   if (ids.length === 1) {
-    await downloadSingleById(ids[0], undefined, extra);
+    await downloadSingleById(ids[0]);
     return;
   }
-  downloadAsZip(ids, extra.justification);
+  await downloadAsZip(ids);
 }
 
 function triggerBrowserDownload(blob: Blob, fileName: string): void {

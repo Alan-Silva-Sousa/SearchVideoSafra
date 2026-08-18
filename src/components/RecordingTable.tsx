@@ -50,12 +50,12 @@ export default function RecordingTable({
     else setSelectedIds(selectedIds.filter(x => x !== CallIDMaster))
   }
 
-  async function runDownload(justification?: string) {
+  async function runDownload() {
     setLoading(true);
     try {
-      await downloadSelectedRecordings(selectedIds, { justification });
-    } catch {
-      alert('Não foi possível iniciar o download do arquivo ZIP.');
+      await downloadSelectedRecordings(selectedIds);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível iniciar o download do arquivo ZIP.');
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function RecordingTable({
         onCancel={() => setJustificationOpen(false)}
         onConfirm={(justification) => {
           setJustificationOpen(false);
-          void runDownload(justification);
+          void runDownload();
         }}
       />
 

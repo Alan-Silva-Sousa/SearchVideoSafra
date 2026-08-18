@@ -61,6 +61,11 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
   const [videoError, setVideoError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!open || !recording.CallIDMaster) return;
+    void api.get(`/audio/${encodeURIComponent(recording.CallIDMaster)}`).catch(() => undefined);
+  }, [open, recording.CallIDMaster]);
+
+  useEffect(() => {
     if (!open || !can(PERMISSIONS.RECORDING_PLAY)) {
       setVideoUrl(null);
       setVideoLoading(false);
@@ -286,9 +291,9 @@ export default function RecordingRow({ recording, checked, onCheck }: Props) {
                 open={justificationOpen}
                 kind="SINGLE"
                 onCancel={() => setJustificationOpen(false)}
-                onConfirm={(justification) => {
+                onConfirm={() => {
                   setJustificationOpen(false);
-                  void downloadSingleRecording(recording, { justification });
+                  void downloadSingleRecording(recording);
                 }}
               />
             </Box>

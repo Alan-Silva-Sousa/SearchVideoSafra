@@ -20,7 +20,7 @@ import { PERMISSIONS, usePermissions } from '../hooks/usePermissions'
 
 export default function RecordingListPage() {
   const navigate = useNavigate()
-  const { can } = usePermissions()
+  const { can, canAccessAudio } = usePermissions()
   const { data: recordings, fetchRecordings, fetchFilterFields, filterFields, loading, error } = useRecordings()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showDateRangeAlert, setShowDateRangeAlert] = useState(false)
@@ -63,7 +63,8 @@ export default function RecordingListPage() {
           <Typography variant="h4" fontWeight={700} color="text.primary">
             Searchvideo4me
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            {canAccessAudio && (
             <Button
               variant="contained"
               color="secondary"
@@ -72,6 +73,7 @@ export default function RecordingListPage() {
             >
               Buscar áudios
             </Button>
+            )}
             {can(PERMISSIONS.AUDIT_READ) && (
               <Button variant="outlined" onClick={() => navigate('/audit')} sx={{ fontWeight: 700 }}>
                 Auditoria
