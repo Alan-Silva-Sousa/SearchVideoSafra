@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useCallback, useState } from 'react';
 import { normalizeAuditEvent, type AuditEventsQuery, type AuditEventsResponse } from '../audit/contract';
 import { api } from '../services/api';
+import { toQueryEnd, toQueryStart } from '../utils/dateInput';
 
 export default function useAuditEvents() {
   const [data, setData] = useState<AuditEventsResponse>({ items: [], total: 0, page: 1, limit: 50 });
@@ -11,7 +12,13 @@ export default function useAuditEvents() {
   const fetchEvents = useCallback(async (query: AuditEventsQuery) => {
     setLoading(true);
     setError('');
-    const payload: AuditEventsQuery = { page: 1, limit: 50, ...query };
+    const payload: AuditEventsQuery = {
+      page: 1,
+      limit: 50,
+      ...query,
+      start: toQueryStart(query.start),
+      end: toQueryEnd(query.end),
+    };
     try {
       const response = await api.get('/audit/events', { params: payload });
       const body = response.data || {};
